@@ -54,7 +54,7 @@ jobs:
         run: scw init access-key=${{ secrets.SCW_ACCESS_KEY }} secret-key=${{ secrets.SCW_SECRET_KEY }} organization-id=${{ secrets.SCW_ORGANIZATION_ID }} project-id=${{ secrets.SCW_PROJECT_ID }} region=fr-par zone=fr-par-1 send-telemetry=false
 
       - name: Update Container
-        run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} registry-image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} 
+        run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} 
 
       - name: Deploy Container
         run: scw container container deploy ${{ secrets.SCW_CONTAINER_ID }}
