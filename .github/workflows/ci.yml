@@ -55,6 +55,3 @@ jobs:
 
       - name: Update Container
         run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} 
-
-      - name: Deploy Container
-        run: scw container container redeploy ${{ secrets.SCW_CONTAINER_ID }}
