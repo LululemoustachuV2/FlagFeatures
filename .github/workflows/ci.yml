@@ -5,8 +5,6 @@ on:
     branches: ["**"]
   pull_request:
 
-env:
-  VERSION: v1.0.0
 
 jobs:
   test:
@@ -44,7 +42,19 @@ jobs:
         run: echo "${{ secrets.SCW_SECRET_KEY }}" | docker login rg.fr-par.scw.cloud -u nologin --password-stdin
 
       - name: Build Docker image
-        run: docker build -t rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ env.VERSION }} .
+        run: docker build -t rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} .
 
       - name: Push Docker image
-        run: docker push rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ env.VERSION }}
+        run: docker push rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }}
+
+      - name: Install Scaleway CLI
+        run: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+
+      - name: Configure Scaleway CLI
+        run: scw init access-key=${{ secrets.SCW_ACCESS_KEY }} secret-key=${{ secrets.SCW_SECRET_KEY }} default-region=fr-par default-zone=fr-par-1 send-telemetry=false 
+
+      - name: Update Container
+        run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} registry-image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} 
+
+      - name: Deploy Container
+        run: scw container container deploy ${{ secrets.SCW_CONTAINER_ID }}
