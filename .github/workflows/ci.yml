@@ -51,7 +51,7 @@ jobs:
         run: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
 
       - name: Configure Scaleway CLI
-        run: scw init access-key=${{ secrets.SCW_ACCESS_KEY }} secret-key=${{ secrets.SCW_SECRET_KEY }} region=fr-par zone=fr-par-1 send-telemetry=false
+        run: scw init access-key=${{ secrets.SCW_ACCESS_KEY }} secret-key=${{ secrets.SCW_SECRET_KEY }} organization-id=${{ secrets.SCW_ORGANIZATION_ID }} project-id=${{ secrets.SCW_PROJECT_ID }} region=fr-par zone=fr-par-1 send-telemetry=false
 
       - name: Update Container
         run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} registry-image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} 
