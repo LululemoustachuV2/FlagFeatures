@@ -71,7 +71,7 @@ jobs:
             with-ssh-key=false
 
       - name: Update Scaleway Container image
-        run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }}
+        run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }} --wait
 
       - name: Trigger Scaleway Container redeploy
-        run: scw container container redeploy ${{ secrets.SCW_CONTAINER_ID }}
+        run: scw container container redeploy ${{ secrets.SCW_CONTAINER_ID }} --wait
