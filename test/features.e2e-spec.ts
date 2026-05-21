@@ -121,6 +121,104 @@ describe("FeaturesController (integration)", () => {
       .expect(404);
   });
 
+  it("PATCH /api/features/update/:key updates a feature", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/update/dark-mode")
+      .send({ name: "Dark Mode v2", description: "Updated theme" })
+      .expect(200)
+      .expect({
+        key: "dark-mode",
+        name: "Dark Mode v2",
+        description: "Updated theme",
+      });
+  });
+
+  it("PATCH /api/features/update/:key can rename a feature key", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/update/dark-mode")
+      .send({ key: "dark-mode-v2", name: "Dark Mode", description: "Theme" })
+      .expect(200)
+      .expect({
+        key: "dark-mode-v2",
+        name: "Dark Mode",
+        description: "Theme",
+      });
+  });
+
+  it("PATCH /api/features/update/:key returns 404 when not found", async () => {
+    await request(app.getHttpServer())
+      .patch("/api/features/update/unknown")
+      .send({ name: "Ghost" })
+      .expect(404);
+  });
+
+  it("PATCH /api/features/update/:key returns 409 for duplicate key", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+    await createFeature("beta-ui", "Beta UI", "New interface");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/update/beta-ui")
+      .send({ key: "dark-mode" })
+      .expect(409);
+  });
+
+  it("PATCH /api/features/update/:key returns 400 for invalid payload", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/update/dark-mode")
+      .send({ name: "" })
+      .expect(400);
+  });
+
+  it("PATCH /api/features/:key/enable enables a feature", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/dark-mode/enable")
+      .expect(200)
+      .expect({
+        key: "dark-mode",
+        name: "Dark Mode",
+        description: "Enable dark theme",
+        enabled: true,
+      });
+  });
+
+  it("PATCH /api/features/:key/enable returns 404 when not found", async () => {
+    await request(app.getHttpServer())
+      .patch("/api/features/unknown/enable")
+      .expect(404);
+  });
+
+  it("PATCH /api/features/:key/disable disables a feature", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
+
+    await request(app.getHttpServer())
+      .patch("/api/features/dark-mode/enable")
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch("/api/features/dark-mode/disable")
+      .expect(200)
+      .expect({
+        key: "dark-mode",
+        name: "Dark Mode",
+        description: "Enable dark theme",
+        enabled: false,
+      });
+  });
+
+  it("PATCH /api/features/:key/disable returns 404 when not found", async () => {
+    await request(app.getHttpServer())
+      .patch("/api/features/unknown/disable")
+      .expect(404);
+  });
+
   it("DELETE /api/features/delete/:key removes a feature", async () => {
     await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
 

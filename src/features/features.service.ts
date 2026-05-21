@@ -6,6 +6,7 @@ import {
 import { features } from "../store";
 import { CreateFeatureDto } from "./create-feature.dto";
 import { Feature } from "./feature.model";
+import { UpdateFeatureDto } from "./update-feature.dto";
 
 @Injectable()
 export class FeaturesService {
@@ -28,6 +29,36 @@ export class FeaturesService {
 
     const feature: Feature = { ...dto };
     features.push(feature);
+    return feature;
+  }
+
+  update(key: string, dto: UpdateFeatureDto): Feature {
+    const index = features.findIndex((feature) => feature.key === key);
+    if (index === -1) {
+      throw new NotFoundException(`Feature ${key} not found`);
+    }
+
+    if (
+      dto.key &&
+      dto.key !== key &&
+      features.some((feature) => feature.key === dto.key)
+    ) {
+      throw new ConflictException("Feature key already exists");
+    }
+
+    features[index] = { ...features[index], ...dto };
+    return features[index];
+  }
+
+  enable(key: string): Feature {
+    const feature = this.findOne(key);
+    feature.enabled = true;
+    return feature;
+  }
+
+  disable(key: string): Feature {
+    const feature = this.findOne(key);
+    feature.enabled = false;
     return feature;
   }
 
