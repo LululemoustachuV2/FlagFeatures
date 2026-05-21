@@ -89,6 +89,40 @@ export class FeaturesService {
     return config;
   }
 
+  getConfig(
+    featureKey: string,
+    envName: string,
+  ): FeatureEnvironmentConfig {
+    const feature = this.findOne(featureKey);
+    const environment = environments.find((env) => env.name === envName);
+    if (!environment) {
+      throw new NotFoundException(`Environment ${envName} not found`);
+    }
+
+    const config = feature.configs?.[envName];
+    if (!config) {
+      throw new NotFoundException(
+        `Config for feature ${featureKey} in ${envName} not found`,
+      );
+    }
+    return config;
+  }
+
+  deleteConfig(featureKey: string, envName: string): void {
+    const feature = this.findOne(featureKey);
+    const environment = environments.find((env) => env.name === envName);
+    if (!environment) {
+      throw new NotFoundException(`Environment ${envName} not found`);
+    }
+
+    if (!feature.configs?.[envName]) {
+      throw new NotFoundException(
+        `Config for feature ${featureKey} in ${envName} not found`,
+      );
+    }
+    delete feature.configs[envName];
+  }
+
   remove(key: string): void {
     const index = features.findIndex((feature) => feature.key === key);
     if (index === -1) {

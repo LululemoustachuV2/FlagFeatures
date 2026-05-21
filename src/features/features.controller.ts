@@ -53,6 +53,14 @@ export class FeaturesController {
     return this.featuresService.disable(key);
   }
 
+  @Get(":key/environments/:env/config")
+  getConfig(
+    @Param("key") key: string,
+    @Param("env") env: string,
+  ): FeatureEnvironmentConfig {
+    return this.featuresService.getConfig(key, env);
+  }
+
   @Put(":key/environments/:env/config")
   setConfig(
     @Param("key") key: string,
@@ -60,6 +68,12 @@ export class FeaturesController {
     @Body() dto: FeatureConfigDto,
   ): FeatureEnvironmentConfig {
     return this.featuresService.setConfig(key, env, dto);
+  }
+
+  @Delete(":key/environments/:env/config")
+  @HttpCode(204)
+  deleteConfig(@Param("key") key: string, @Param("env") env: string): void {
+    return this.featuresService.deleteConfig(key, env);
   }
 
   @Delete("delete/:key")
