@@ -1,8 +1,8 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import * as request from "supertest";
-import { AppModule } from "../src/app.module";
-import { environments } from "../src/store";
+import { AppModule } from "../../src/app.module";
+import { environments } from "../../src/store";
 
 describe("EnvironmentsController (integration)", () => {
   let app: INestApplication;

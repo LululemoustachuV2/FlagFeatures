@@ -1,8 +1,8 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import * as request from "supertest";
-import { AppModule } from "../src/app.module";
-import { groups, users } from "../src/store";
+import { AppModule } from "../../src/app.module";
+import { groups, users } from "../../src/store";
 
 describe("GroupsController (integration)", () => {
   let app: INestApplication;

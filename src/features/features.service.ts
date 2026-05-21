@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { environments, features } from "../store";
+import { environments, features, groups, users } from "../store";
+import { evaluateFeatureAccess } from "./evaluate-feature-access";
 import { CreateFeatureDto } from "./create-feature.dto";
 import { FeatureConfigDto } from "./feature-config.dto";
 import { FeatureEnvironmentConfig } from "./feature-config.model";
@@ -106,6 +107,31 @@ export class FeaturesService {
       );
     }
     return config;
+  }
+
+  evaluate(
+    featureKey: string,
+    userId: number,
+    envName: string,
+  ): { feature: string; enabled: boolean; reason: string } {
+    const feature = this.findOne(featureKey);
+    const config = this.getConfig(featureKey, envName);
+
+    const user = users.find((item) => item.id === userId);
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const userGroups = groups.filter((group) =>
+      group.userIds.includes(userId),
+    );
+    const result = evaluateFeatureAccess(feature, config, user, userGroups);
+
+    return {
+      feature: feature.key,
+      enabled: result.enabled,
+      reason: result.reason,
+    };
   }
 
   deleteConfig(featureKey: string, envName: string): void {

@@ -5,9 +5,11 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
+  Query,
 } from "@nestjs/common";
 import { CreateFeatureDto } from "./create-feature.dto";
 import { FeatureConfigDto } from "./feature-config.dto";
@@ -51,6 +53,15 @@ export class FeaturesController {
   @Patch(":key/disable")
   disable(@Param("key") key: string): Feature {
     return this.featuresService.disable(key);
+  }
+
+  @Get(":key/evaluate")
+  evaluate(
+    @Param("key") key: string,
+    @Query("userId", ParseIntPipe) userId: number,
+    @Query("env") env: string,
+  ): { feature: string; enabled: boolean; reason: string } {
+    return this.featuresService.evaluate(key, userId, env);
   }
 
   @Get(":key/environments/:env/config")
