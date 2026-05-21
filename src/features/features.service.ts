@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { features } from "../store";
+import { environments, features } from "../store";
 import { CreateFeatureDto } from "./create-feature.dto";
+import { FeatureConfigDto } from "./feature-config.dto";
+import { FeatureEnvironmentConfig } from "./feature-config.model";
 import { Feature } from "./feature.model";
 import { UpdateFeatureDto } from "./update-feature.dto";
 
@@ -60,6 +62,31 @@ export class FeaturesService {
     const feature = this.findOne(key);
     feature.enabled = false;
     return feature;
+  }
+
+  setConfig(
+    featureKey: string,
+    envName: string,
+    dto: FeatureConfigDto,
+  ): FeatureEnvironmentConfig {
+    const feature = this.findOne(featureKey);
+    const environment = environments.find((env) => env.name === envName);
+    if (!environment) {
+      throw new NotFoundException(`Environment ${envName} not found`);
+    }
+
+    if (!feature.configs) {
+      feature.configs = {};
+    }
+
+    const config: FeatureEnvironmentConfig = {
+      enabled: dto.enabled,
+      rollout: dto.rollout,
+      allowedGroups: dto.allowedGroups ?? [],
+      allowedUsers: dto.allowedUsers ?? [],
+    };
+    feature.configs[envName] = config;
+    return config;
   }
 
   remove(key: string): void {

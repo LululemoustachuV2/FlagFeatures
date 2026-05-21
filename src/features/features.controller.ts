@@ -7,8 +7,11 @@ import {
   Param,
   Patch,
   Post,
+  Put,
 } from "@nestjs/common";
 import { CreateFeatureDto } from "./create-feature.dto";
+import { FeatureConfigDto } from "./feature-config.dto";
+import { FeatureEnvironmentConfig } from "./feature-config.model";
 import { Feature } from "./feature.model";
 import { FeaturesService } from "./features.service";
 import { UpdateFeatureDto } from "./update-feature.dto";
@@ -48,6 +51,15 @@ export class FeaturesController {
   @Patch(":key/disable")
   disable(@Param("key") key: string): Feature {
     return this.featuresService.disable(key);
+  }
+
+  @Put(":key/environments/:env/config")
+  setConfig(
+    @Param("key") key: string,
+    @Param("env") env: string,
+    @Body() dto: FeatureConfigDto,
+  ): FeatureEnvironmentConfig {
+    return this.featuresService.setConfig(key, env, dto);
   }
 
   @Delete("delete/:key")
