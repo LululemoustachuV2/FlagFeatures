@@ -316,6 +316,74 @@ describe("FeaturesController (integration)", () => {
       .expect(400);
   });
 
+  it("GET /api/features/:key/environments/:env/config returns config", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 75,
+        allowedGroups: [1],
+        allowedUsers: [2],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/environments/prod/config")
+      .expect(200)
+      .expect({
+        enabled: true,
+        rollout: 75,
+        allowedGroups: [1],
+        allowedUsers: [2],
+      });
+  });
+
+  it("GET /api/features/:key/environments/:env/config returns 404 when config not found", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/environments/prod/config")
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/environments/:env/config returns 404 when feature not found", async () => {
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get("/api/features/unknown/environments/prod/config")
+      .expect(404);
+  });
+
+  it("DELETE /api/features/:key/environments/:env/config removes config", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({ enabled: true, rollout: 50, allowedGroups: [], allowedUsers: [] })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete("/api/features/dark-mode/environments/prod/config")
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/environments/prod/config")
+      .expect(404);
+  });
+
+  it("DELETE /api/features/:key/environments/:env/config returns 404 when config not found", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .delete("/api/features/dark-mode/environments/prod/config")
+      .expect(404);
+  });
+
   it("DELETE /api/features/delete/:key removes a feature", async () => {
     await createFeature("dark-mode", "Dark Mode", "Enable dark theme");
 
