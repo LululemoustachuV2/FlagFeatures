@@ -7,7 +7,10 @@
     "start:dev": "ts-node src/main.ts",
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "test:unit": "jest --selectProjects unit",
+    "test:unit:coverage": "jest --selectProjects unit --coverage --collectCoverageFrom=src/features/evaluate-feature-access.ts",
+    "test:e2e": "jest --selectProjects e2e"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
@@ -30,16 +33,27 @@
     "typescript": "^5.7.2"
   },
   "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "testRegex": "test/.*\\.e2e-spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "testEnvironment": "node"
+    "projects": [
+      {
+        "displayName": "unit",
+        "moduleFileExtensions": ["js", "json", "ts"],
+        "rootDir": ".",
+        "testMatch": ["<rootDir>/test/unit/**/*.spec.ts"],
+        "transform": {
+          "^.+\\.(t|j)s$": "ts-jest"
+        },
+        "testEnvironment": "node"
+      },
+      {
+        "displayName": "e2e",
+        "moduleFileExtensions": ["js", "json", "ts"],
+        "rootDir": ".",
+        "testMatch": ["<rootDir>/test/e2e/**/*.e2e-spec.ts"],
+        "transform": {
+          "^.+\\.(t|j)s$": "ts-jest"
+        },
+        "testEnvironment": "node"
+      }
+    ]
   }
 }
