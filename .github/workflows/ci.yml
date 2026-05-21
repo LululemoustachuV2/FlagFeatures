@@ -74,4 +74,4 @@ jobs:
         run: scw container container update ${{ secrets.SCW_CONTAINER_ID }} image=rg.fr-par.scw.cloud/namespace-bateau/lukas:${{ github.sha }}
 
       - name: Trigger Scaleway Container redeploy
-        run: scw container container deploy ${{ secrets.SCW_CONTAINER_ID }}
+        run: scw container container redeploy ${{ secrets.SCW_CONTAINER_ID }}
