@@ -33,4 +33,27 @@ describe("HealthController (integration)", () => {
       .expect(200)
       .expect({ version: "1.0.0" });
   });
+
+  it("GET /api/unknown returns 404", async () => {
+    await request(app.getHttpServer()).get("/api/unknown").expect(404);
+  });
+
+  it("POST /api/health returns 404", async () => {
+    await request(app.getHttpServer()).post("/api/health").send({}).expect(404);
+  });
+
+  it("POST /api/version returns 404", async () => {
+    await request(app.getHttpServer()).post("/api/version").send({}).expect(404);
+  });
+
+  it("DELETE /api/health returns 404", async () => {
+    await request(app.getHttpServer()).delete("/api/health").expect(404);
+  });
+
+  it("PATCH /api/version returns 404", async () => {
+    await request(app.getHttpServer())
+      .patch("/api/version")
+      .send({ version: "2.0.0" })
+      .expect(404);
+  });
 });

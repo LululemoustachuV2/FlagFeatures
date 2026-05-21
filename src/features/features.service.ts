@@ -83,8 +83,8 @@ export class FeaturesService {
     const config: FeatureEnvironmentConfig = {
       enabled: dto.enabled,
       rollout: dto.rollout,
-      allowedGroups: dto.allowedGroups ?? [],
-      allowedUsers: dto.allowedUsers ?? [],
+      allowedGroups: dto.allowedGroups,
+      allowedUsers: dto.allowedUsers,
     };
     feature.configs[envName] = config;
     return config;
