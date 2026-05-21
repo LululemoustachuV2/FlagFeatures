@@ -2,7 +2,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import * as request from "supertest";
 import { AppModule } from "../../src/app.module";
-import { environments, features } from "../../src/store";
+import { environments, features, groups, users } from "../../src/store";
 
 describe("FeaturesController (integration)", () => {
   let app: INestApplication;
@@ -19,6 +19,8 @@ describe("FeaturesController (integration)", () => {
   });
 
   beforeEach(() => {
+    users.length = 0;
+    groups.length = 0;
     features.length = 0;
     environments.length = 0;
   });
@@ -52,6 +54,50 @@ describe("FeaturesController (integration)", () => {
       .post("/api/environments/add-environment")
       .send({ name: "prod", description: "Production" })
       .expect(201);
+  }
+
+  async function seedEvaluateBase(): Promise<void> {
+    await request(app.getHttpServer())
+      .post("/api/users/add-user")
+      .send({ email: "lukas@test.com", name: "Lukas", role: "admin" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/api/features/add-feature")
+      .send({
+        key: "dark-mode",
+        name: "Dark Mode",
+        description: "Theme sombre",
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch("/api/features/dark-mode/enable")
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
+      .expect(201);
+  }
+
+  async function seedEvaluateScenario(): Promise<void> {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .post("/api/groups/add-group")
+      .send({ name: "Beta", description: "Beta testers" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 0,
+        allowedGroups: [],
+        allowedUsers: [1],
+      })
+      .expect(200);
   }
 
   it("POST /api/features/add-feature creates a feature and returns 201", async () => {
@@ -316,6 +362,21 @@ describe("FeaturesController (integration)", () => {
       .expect(400);
   });
 
+  it("PUT /api/features/:key/environments/:env/config defaults allowedGroups and allowedUsers when omitted", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({ enabled: true, rollout: 50 })
+      .expect(200)
+      .expect({
+        enabled: true,
+        rollout: 50,
+        allowedGroups: [],
+        allowedUsers: [],
+      });
+  });
+
   it("GET /api/features/:key/environments/:env/config returns config", async () => {
     await seedFeatureAndEnv();
 
@@ -382,6 +443,308 @@ describe("FeaturesController (integration)", () => {
     await request(app.getHttpServer())
       .delete("/api/features/dark-mode/environments/prod/config")
       .expect(404);
+  });
+
+  it("GET /api/features/:key/environments/:env/config returns 404 when environment not found", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Theme sombre");
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/environments/staging/config")
+      .expect(404);
+  });
+
+  it("DELETE /api/features/:key/environments/:env/config returns 404 when feature not found", async () => {
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete("/api/features/unknown/environments/prod/config")
+      .expect(404);
+  });
+
+  it("DELETE /api/features/:key/environments/:env/config returns 404 when environment not found", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .delete("/api/features/dark-mode/environments/staging/config")
+      .expect(404);
+  });
+
+  it("PUT /api/features/:key/environments/:env/config returns 400 when enabled is missing", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({ rollout: 50, allowedGroups: [], allowedUsers: [] })
+      .expect(400);
+  });
+
+  it("PUT /api/features/:key/environments/:env/config returns 400 when rollout is negative", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: -1,
+        allowedGroups: [],
+        allowedUsers: [],
+      })
+      .expect(400);
+  });
+
+  it("GET /api/features/:key/evaluate returns enabled for allowed user", async () => {
+    await seedEvaluateScenario();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: true,
+        reason: "User is explicitly allowed",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns enabled via allowed group", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .post("/api/groups/add-group")
+      .send({ name: "Beta", description: "Beta testers" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/api/groups/1/add-user/1")
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 0,
+        allowedGroups: [1],
+        allowedUsers: [],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: true,
+        reason: "User belongs to an allowed group",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns enabled via rollout only", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 100,
+        allowedGroups: [],
+        allowedUsers: [],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: true,
+        reason: "User is within rollout percentage",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns disabled when feature is globally disabled", async () => {
+    await seedEvaluateScenario();
+
+    await request(app.getHttpServer())
+      .patch("/api/features/dark-mode/disable")
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: false,
+        reason: "Feature is disabled globally",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns disabled when feature was never enabled globally", async () => {
+    await request(app.getHttpServer())
+      .post("/api/users/add-user")
+      .send({ email: "lukas@test.com", name: "Lukas", role: "admin" })
+      .expect(201);
+
+    await createFeature("dark-mode", "Dark Mode", "Theme sombre");
+
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 100,
+        allowedGroups: [],
+        allowedUsers: [1],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: false,
+        reason: "Feature is disabled globally",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns disabled when feature is disabled in environment", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: false,
+        rollout: 100,
+        allowedGroups: [],
+        allowedUsers: [1],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: false,
+        reason: "Feature is disabled in this environment",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns disabled when user is not eligible", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 0,
+        allowedGroups: [],
+        allowedUsers: [],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(200)
+      .expect({
+        feature: "dark-mode",
+        enabled: false,
+        reason: "User is not eligible for this feature",
+      });
+  });
+
+  it("GET /api/features/:key/evaluate returns 404 when feature not found", async () => {
+    await request(app.getHttpServer())
+      .get("/api/features/unknown/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/evaluate returns 404 when user not found", async () => {
+    await seedEvaluateScenario();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 999, env: "prod" })
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/evaluate returns 404 when environment not found", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 0,
+        allowedGroups: [],
+        allowedUsers: [1],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "staging" })
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/evaluate returns 404 when config not found", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1, env: "prod" })
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/evaluate returns 400 when userId is missing", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ env: "prod" })
+      .expect(400);
+  });
+
+  it("GET /api/features/:key/evaluate returns 404 when env is missing", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 0,
+        allowedGroups: [],
+        allowedUsers: [1],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: 1 })
+      .expect(404);
+  });
+
+  it("GET /api/features/:key/evaluate returns 400 when userId is not a number", async () => {
+    await seedEvaluateBase();
+
+    await request(app.getHttpServer())
+      .get("/api/features/dark-mode/evaluate")
+      .query({ userId: "abc", env: "prod" })
+      .expect(400);
   });
 
   it("DELETE /api/features/delete/:key removes a feature", async () => {

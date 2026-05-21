@@ -142,6 +142,15 @@ describe("GroupsController (integration)", () => {
       .expect(404);
   });
 
+  it("PATCH /api/groups/update/:id returns 400 for invalid payload", async () => {
+    await createGroup("Admins", "Admin group");
+
+    await request(app.getHttpServer())
+      .patch("/api/groups/update/1")
+      .send({ name: "" })
+      .expect(400);
+  });
+
   it("PATCH /api/groups/update/:id returns 409 for duplicate name", async () => {
     await createGroup("Admins", "Admin group");
     await createGroup("Beta", "Beta testers");
@@ -243,6 +252,14 @@ describe("GroupsController (integration)", () => {
 
     await request(app.getHttpServer())
       .delete("/api/groups/1/remove-user/999")
+      .expect(404);
+  });
+
+  it("DELETE /api/groups/:id/remove-user/:userId returns 404 when group not found", async () => {
+    await createUser("lukas@example.com", "Lukas", "admin");
+
+    await request(app.getHttpServer())
+      .delete("/api/groups/999/remove-user/1")
       .expect(404);
   });
 

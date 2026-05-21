@@ -151,4 +151,13 @@ describe("EnvironmentsController (integration)", () => {
       .delete("/api/environments/delete/unknown")
       .expect(404);
   });
+
+  it("PATCH /api/environments/update/:name returns 400 for invalid payload", async () => {
+    await createEnvironment("prod", "Production");
+
+    await request(app.getHttpServer())
+      .patch("/api/environments/update/prod")
+      .send({ name: "" })
+      .expect(400);
+  });
 });

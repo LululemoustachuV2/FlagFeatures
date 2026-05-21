@@ -163,4 +163,17 @@ describe("UsersController (integration)", () => {
       .delete("/api/users/delete/999")
       .expect(404);
   });
+
+  it("POST /api/users/add-user returns 400 when body is empty", async () => {
+    await request(app.getHttpServer())
+      .post("/api/users/add-user")
+      .send({})
+      .expect(400);
+  });
+
+  it("GET /api/users/get-by-id/:id returns 400 when id is not a number", async () => {
+    await request(app.getHttpServer())
+      .get("/api/users/get-by-id/abc")
+      .expect(400);
+  });
 });
