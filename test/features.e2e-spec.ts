@@ -2,7 +2,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import * as request from "supertest";
 import { AppModule } from "../src/app.module";
-import { features } from "../src/store";
+import { environments, features } from "../src/store";
 
 describe("FeaturesController (integration)", () => {
   let app: INestApplication;
@@ -20,6 +20,7 @@ describe("FeaturesController (integration)", () => {
 
   beforeEach(() => {
     features.length = 0;
+    environments.length = 0;
   });
 
   afterAll(async () => {
@@ -34,6 +35,22 @@ describe("FeaturesController (integration)", () => {
     await request(app.getHttpServer())
       .post("/api/features/add-feature")
       .send({ key, name, description })
+      .expect(201);
+  }
+
+  async function seedFeatureAndEnv(): Promise<void> {
+    await request(app.getHttpServer())
+      .post("/api/features/add-feature")
+      .send({
+        key: "dark-mode",
+        name: "Dark Mode",
+        description: "Theme sombre",
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
       .expect(201);
   }
 
@@ -217,6 +234,86 @@ describe("FeaturesController (integration)", () => {
     await request(app.getHttpServer())
       .patch("/api/features/unknown/disable")
       .expect(404);
+  });
+
+  it("PUT /api/features/:key/environments/:env/config sets config and returns 200", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 50,
+        allowedGroups: [1, 2],
+        allowedUsers: [10],
+      })
+      .expect(200)
+      .expect({
+        enabled: true,
+        rollout: 50,
+        allowedGroups: [1, 2],
+        allowedUsers: [10],
+      });
+  });
+
+  it("PUT /api/features/:key/environments/:env/config overwrites existing config", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: true,
+        rollout: 100,
+        allowedGroups: [],
+        allowedUsers: [],
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({
+        enabled: false,
+        rollout: 0,
+        allowedGroups: [3],
+        allowedUsers: [],
+      })
+      .expect(200)
+      .expect({
+        enabled: false,
+        rollout: 0,
+        allowedGroups: [3],
+        allowedUsers: [],
+      });
+  });
+
+  it("PUT /api/features/:key/environments/:env/config returns 404 when feature not found", async () => {
+    await request(app.getHttpServer())
+      .post("/api/environments/add-environment")
+      .send({ name: "prod", description: "Production" })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put("/api/features/unknown/environments/prod/config")
+      .send({ enabled: true, rollout: 50, allowedGroups: [], allowedUsers: [] })
+      .expect(404);
+  });
+
+  it("PUT /api/features/:key/environments/:env/config returns 404 when environment not found", async () => {
+    await createFeature("dark-mode", "Dark Mode", "Theme sombre");
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/staging/config")
+      .send({ enabled: true, rollout: 50, allowedGroups: [], allowedUsers: [] })
+      .expect(404);
+  });
+
+  it("PUT /api/features/:key/environments/:env/config returns 400 for invalid payload", async () => {
+    await seedFeatureAndEnv();
+
+    await request(app.getHttpServer())
+      .put("/api/features/dark-mode/environments/prod/config")
+      .send({ enabled: true, rollout: 150, allowedGroups: [], allowedUsers: [] })
+      .expect(400);
   });
 
   it("DELETE /api/features/delete/:key removes a feature", async () => {
