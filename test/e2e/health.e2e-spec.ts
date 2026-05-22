@@ -31,7 +31,7 @@ describe("HealthController (integration)", () => {
     await request(app.getHttpServer())
       .get("/api/version")
       .expect(200)
-      .expect({ version: "1.0.0" });
+      .expect({ version: "2.0.0" });
   });
 
   it("GET /api/unknown returns 404", async () => {
