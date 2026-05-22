@@ -96,3 +96,23 @@ export class FeatureEvaluateResponseSchema {
   @ApiProperty({ example: "User is explicitly allowed" })
   reason!: string;
 }
+
+export class AuditLogSchema {
+  @ApiProperty({ example: 1 })
+  id!: number;
+
+  @ApiProperty({ example: "feature.created" })
+  action!: string;
+
+  @ApiProperty({ example: "feature:dark-mode" })
+  resource!: string;
+
+  @ApiProperty({ example: "2026-05-21T12:00:00.000Z" })
+  timestamp!: string;
+
+  @ApiProperty({ example: { key: "dark-mode", name: "Dark Mode" } })
+  details!: Record<string, unknown>;
+
+  @ApiPropertyOptional({ example: "dark-mode" })
+  featureKey?: string;
+}
