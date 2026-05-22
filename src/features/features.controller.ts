@@ -23,7 +23,10 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
+import { AuditService } from "../audit/audit.service";
+import { AuditLog } from "../audit/audit-log.model";
 import {
+  AuditLogSchema,
   FeatureEnvironmentConfigSchema,
   FeatureEvaluateResponseSchema,
   FeatureSchema,
@@ -38,7 +41,10 @@ import { UpdateFeatureDto } from "./update-feature.dto";
 @ApiTags("features")
 @Controller("features")
 export class FeaturesController {
-  constructor(private readonly featuresService: FeaturesService) {}
+  constructor(
+    private readonly featuresService: FeaturesService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post("add-feature")
   @ApiOperation({ summary: "Créer une feature flag" })
@@ -63,6 +69,16 @@ export class FeaturesController {
   @ApiNotFoundResponse({ description: "Feature introuvable" })
   findOne(@Param("key") key: string): Feature {
     return this.featuresService.findOne(key);
+  }
+
+  @Get(":key/audit-logs")
+  @ApiOperation({ summary: "Lister les audit logs d'une feature" })
+  @ApiParam({ name: "key", example: "dark-mode" })
+  @ApiOkResponse({ type: AuditLogSchema, isArray: true })
+  @ApiNotFoundResponse({ description: "Feature introuvable" })
+  findAuditLogs(@Param("key") key: string): AuditLog[] {
+    this.featuresService.findOne(key);
+    return this.auditService.findByFeatureKey(key);
   }
 
   @Patch("update/:key")

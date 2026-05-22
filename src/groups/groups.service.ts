@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { AuditService } from "../audit/audit.service";
 import { groups, users } from "../store";
 import { User } from "../users/user.model";
 import { CreateGroupDto } from "./create-group.dto";
@@ -11,6 +12,8 @@ import { UpdateGroupDto } from "./update-group.dto";
 
 @Injectable()
 export class GroupsService {
+  constructor(private readonly auditService: AuditService) {}
+
   findAll(): Group[] {
     return groups;
   }
@@ -72,6 +75,10 @@ export class GroupsService {
     }
 
     group.userIds.push(userId);
+    this.auditService.log("group.user.added", `group:${groupId}`, {
+      groupId,
+      userId,
+    });
     return group;
   }
 
@@ -82,6 +89,10 @@ export class GroupsService {
       throw new NotFoundException(`User ${userId} not in group ${groupId}`);
     }
     group.userIds.splice(index, 1);
+    this.auditService.log("group.user.removed", `group:${groupId}`, {
+      groupId,
+      userId,
+    });
   }
 
   findGroupUsers(groupId: number): User[] {

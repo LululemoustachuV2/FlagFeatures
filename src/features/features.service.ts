@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { AuditService } from "../audit/audit.service";
 import { environments, features, groups, users } from "../store";
 import { evaluateFeatureAccess } from "./evaluate-feature-access";
 import { CreateFeatureDto } from "./create-feature.dto";
@@ -13,6 +14,8 @@ import { UpdateFeatureDto } from "./update-feature.dto";
 
 @Injectable()
 export class FeaturesService {
+  constructor(private readonly auditService: AuditService) {}
+
   findAll(): Feature[] {
     return features;
   }
@@ -32,6 +35,12 @@ export class FeaturesService {
 
     const feature: Feature = { ...dto };
     features.push(feature);
+    this.auditService.log(
+      "feature.created",
+      `feature:${feature.key}`,
+      { key: feature.key, name: feature.name, description: feature.description },
+      feature.key,
+    );
     return feature;
   }
 
@@ -50,18 +59,37 @@ export class FeaturesService {
     }
 
     features[index] = { ...features[index], ...dto };
-    return features[index];
+    const updated = features[index];
+    this.auditService.log(
+      "feature.updated",
+      `feature:${updated.key}`,
+      { previousKey: key, changes: dto },
+      updated.key,
+    );
+    return updated;
   }
 
   enable(key: string): Feature {
     const feature = this.findOne(key);
     feature.enabled = true;
+    this.auditService.log(
+      "feature.enabled",
+      `feature:${key}`,
+      { key },
+      key,
+    );
     return feature;
   }
 
   disable(key: string): Feature {
     const feature = this.findOne(key);
     feature.enabled = false;
+    this.auditService.log(
+      "feature.disabled",
+      `feature:${key}`,
+      { key },
+      key,
+    );
     return feature;
   }
 
@@ -87,6 +115,12 @@ export class FeaturesService {
       allowedUsers: dto.allowedUsers,
     };
     feature.configs[envName] = config;
+    this.auditService.log(
+      "feature.config.updated",
+      `feature:${featureKey}`,
+      { environment: envName, config },
+      featureKey,
+    );
     return config;
   }
 
@@ -147,6 +181,12 @@ export class FeaturesService {
       );
     }
     delete feature.configs[envName];
+    this.auditService.log(
+      "feature.config.deleted",
+      `feature:${featureKey}`,
+      { environment: envName },
+      featureKey,
+    );
   }
 
   remove(key: string): void {
@@ -154,6 +194,12 @@ export class FeaturesService {
     if (index === -1) {
       throw new NotFoundException(`Feature ${key} not found`);
     }
+    this.auditService.log(
+      "feature.deleted",
+      `feature:${key}`,
+      { key },
+      key,
+    );
     features.splice(index, 1);
   }
 }

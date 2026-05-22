@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { AuditService } from "../audit/audit.service";
 import { users } from "../store";
 import { CreateUserDto } from "./create-user.dto";
 import { User } from "./user.model";
@@ -10,6 +11,8 @@ import { UpdateUserDto } from "./update-user.dto";
 
 @Injectable()
 export class UsersService {
+  constructor(private readonly auditService: AuditService) {}
+
   findAll(): User[] {
     return users;
   }
@@ -32,6 +35,12 @@ export class UsersService {
 
     const user: User = { id, ...dto };
     users.push(user);
+    this.auditService.log("user.created", `user:${user.id}`, {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
     return user;
   }
 
@@ -57,6 +66,13 @@ export class UsersService {
     if (index === -1) {
       throw new NotFoundException(`User ${id} not found`);
     }
+    const user = users[index];
+    this.auditService.log("user.deleted", `user:${id}`, {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
     users.splice(index, 1);
   }
 }
